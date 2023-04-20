@@ -1,14 +1,13 @@
 package org.example.controller;
 
 import org.example.model.Car;
-import org.example.model.Client;
 import org.example.service.CarServiceImpl;
 import org.example.service.ICarService;
 
 import java.util.ArrayList;
 
 public class CarController {
-    private ICarService service;
+    private final ICarService service;
 
     public CarController() {
         service = new CarServiceImpl();

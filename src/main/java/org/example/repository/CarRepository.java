@@ -6,8 +6,10 @@ import java.sql.*;
 import java.util.ArrayList;
 
 
-public class CarRepository implements ICarRepository,Conexion{
-    String JDBC_URL = "jdbc:mysql://localhost:3306/rentacar?useSSL=false&useTimezone&useTimezone=true&serverTimezone=UTC&allowPublicKeyRetrieval=true";
+public class CarRepository implements ICarRepository {
+
+    String JDBC_URL = "jdbc:mysql://localhost:3306/rentacar?useSSL=false&useTimezone&useTimezone=true&serverTimezone=UTC" +
+            "&allowPublicKeyRetrieval=true";
     String JDBC_USER = "root";
     String JDBC_PASSWORD = "admin";
 
@@ -18,29 +20,13 @@ public class CarRepository implements ICarRepository,Conexion{
     private static final String SQL_UPDATE = "UPDATE rentacar.car SET license_plate= ? WHERE id_car = ?;";
     private static final String SQL_DELETE = "DELETE FROM rentacar.car WHERE id_car = ?;";
 
-    public CarRepository() {
-    }
 
-    //Interface Conexion
-    @Override
+    Connection connection = null;
+
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(JDBC_URL,JDBC_USER,JDBC_PASSWORD);
-    }
-    @Override
-    public void close(ResultSet rs) throws SQLException {
-        rs.close();
-    }
-    @Override
-    public void close(Statement rs) throws SQLException {
-        rs.close();
-    }
-    @Override
-    public void close(PreparedStatement smtm) throws SQLException {
-        smtm.close();
-    }
-    @Override
-    public void close(Connection conn) throws SQLException {
-        conn.close();
+        if (connection == null)
+            return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
+        else return connection;
     }
 
 
@@ -49,63 +35,65 @@ public class CarRepository implements ICarRepository,Conexion{
     //Add car method
     @Override
     public void add(Car car) {
-        if (!licenseExists(car.getLicensePlate())){
+        if (!licenseExists(car.getLicensePlate())) {
             Connection conn = null;
             PreparedStatement stmt = null;
-            ResultSet rs = null;
             int registros = 0;
             try {
                 conn = getConnection();
                 stmt = conn.prepareStatement(SQL_INSERT);
-                stmt.setString(1,car.getLicensePlate());
+                stmt.setString(1, car.getLicensePlate());
                 registros = stmt.executeUpdate();
 
-            }catch (SQLException e) {
+            } catch (SQLException e) {
                 e.printStackTrace(System.out);
-            }finally {
+            } finally {
+                if (stmt != null) {
                 try {
-                    close(stmt);
-                    close(conn);
-                } catch (SQLException e) {
-                    e.printStackTrace(System.out);
-                }
+                        stmt.close();
+                        conn.close();
+                } catch (SQLException e) { /* Ignored */ }
+
             }
-        }else System.out.println("La Matricula: " + car.getLicensePlate() +" ya esta registrada");
+        }
+        } else System.out.println("La Matricula: " + car.getLicensePlate() + " ya esta registrada");
     }
+
     //DeleteByIdMethod (Completed) TODO Se puede eliminar a traves del findAll
     @Override
     public void deleteById(Long id) {
-    if (!isEmpty()){
-        if ((findById(id) !=null)){
-            Connection conn = null;
-            PreparedStatement stmt = null;
-            int registros = 0;
+        if (!isEmpty()) {
+            if ((findById(id) != null)) {
+                Connection conn = null;
+                PreparedStatement stmt = null;
+                int registros = 0;
 
-            try {
-                conn = getConnection();
-                stmt = conn.prepareStatement(SQL_DELETE);
-                stmt.setInt(1, Math.toIntExact(id));
-                registros = stmt.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace(System.out);
-            }finally {
                 try {
-                    close(stmt);
-                    close(conn);
+                    conn = getConnection();
+                    stmt = conn.prepareStatement(SQL_DELETE);
+                    stmt.setInt(1, Math.toIntExact(id));
+                    registros = stmt.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace(System.out);
+                } finally {
+                    try {
+                        stmt.close();
+                        conn.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace(System.out);
+                    }
                 }
-            }
-            System.out.println("La matricula con id: " + id + " se ha eliminado correctamente");
-        }else System.out.println("La id: " + id + " no existe");
+                System.out.println("La matricula con id: " + id + " se ha eliminado correctamente");
+            } else System.out.println("La id: " + id + " no existe");
+
+        }
 
     }
 
-    }
     //List all database content method (Completed)
     @Override
     public ArrayList<Car> findAll() {
-        ArrayList<Car> carList= new ArrayList<>();
+        ArrayList<Car> carList = new ArrayList<>();
         Connection conn = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -113,29 +101,30 @@ public class CarRepository implements ICarRepository,Conexion{
             conn = getConnection();
             stmt = conn.prepareStatement(SQL_SELECT);
             rs = stmt.executeQuery();
-            while (rs.next()){
+            while (rs.next()) {
                 Long idCar = (long) rs.getInt("id_car");
                 String licensePlate = rs.getString("license_plate");
-                Car car = new Car(idCar,licensePlate);
+                Car car = new Car(idCar, licensePlate);
                 carList.add(car);
             }
         } catch (SQLException e) {
             e.printStackTrace(System.out);
-        }finally {
+        } finally {
             try {
-                close(rs);
-                close(stmt);
-                close(conn);
+                rs.close();
+                stmt.close();
+                conn.close();
             } catch (SQLException e) {
                 e.printStackTrace(System.out);
             }
         }
         return carList;
     }
+
     //Find by id method
     @Override
     public Car findById(Long id) {
-        if (!isEmpty()){
+        if (!isEmpty()) {
             Connection conn = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -144,24 +133,34 @@ public class CarRepository implements ICarRepository,Conexion{
             try {
                 conn = getConnection();
                 stmt = conn.prepareStatement(SQL_SELECT_BY_ID);
-                stmt.setLong(1,id);
+                stmt.setLong(1, id);
                 rs = stmt.executeQuery();
-                if (rs.next()){
+                if (rs.next()) {
                     Long idCar = rs.getLong("id_car");
                     String licensePlate = rs.getString("license_plate");
-                    car = new Car(idCar,licensePlate);
+                    car = new Car(idCar, licensePlate);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e);
+            }finally {
+                if (stmt != null && rs != null) {
+                    try {
+                        rs.close();
+                        stmt.close();
+                        conn.close();
+                    } catch (SQLException e) { /* Ignored */ }
+
+                }
             }
             return car;
-        }else return null;
+        } else return null;
 
     }
+
     //Find by license plate method (Completed)
     @Override
     public Car findByLicensePlate(String LicensePlate) { //TODO se podria hacer recorriendo el array de findAll
-        if (licenseExists(LicensePlate)){
+        if (licenseExists(LicensePlate)) {
             Connection conn = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -170,64 +169,74 @@ public class CarRepository implements ICarRepository,Conexion{
             try {
                 conn = getConnection();
                 stmt = conn.prepareStatement(SQL_SELECT_BY_LICENSE_PLATE);
-                stmt.setString(1,LicensePlate);
+                stmt.setString(1, LicensePlate);
                 rs = stmt.executeQuery();
-                if (rs.next()){
+                if (rs.next()) {
                     Long idCar = (long) rs.getInt("id_car");
                     String licensePlate = rs.getString("license_plate");
-                    car = new Car(idCar,licensePlate);
+                    car = new Car(idCar, licensePlate);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e);
+            }finally {
+                if (stmt != null && rs != null) {
+                    try {
+                        rs.close();
+                        stmt.close();
+                        conn.close();
+                    } catch (SQLException e) { /* Ignored */ }
+
+                }
             }
             return car;
         }
-           return null;
+        return null;
     }
+
     //Update field throught an object
     @Override
     public void update(Car car) {
-        if (!isEmpty()){
+        if (!isEmpty()) {
             Connection conn = null;
             PreparedStatement stmt = null;
             int registros = 0;
             try {
                 conn = getConnection();
                 stmt = conn.prepareStatement(SQL_UPDATE);
-                stmt.setString(1,car.getLicensePlate());
+                stmt.setString(1, car.getLicensePlate());
                 stmt.setLong(2, car.getIdCar());
                 registros = stmt.executeUpdate();
 
-            }catch (SQLException e) {
+            } catch (SQLException e) {
                 e.printStackTrace(System.out);
-            }finally {
+            } if (stmt != null) {
                 try {
-                    close(stmt);
-                    close(conn);
-                } catch (SQLException e) {
-                    e.printStackTrace(System.out);
-                }
+                    stmt.close();
+                    conn.close();
+                } catch (SQLException e) { /* Ignored */ }
+
             }
         }
-    }
-    //Method is empty: Check if the database is empty
-    public boolean isEmpty(){
-        if (findAll().size()==0){
-            return true;
-        }else return false;
-    }
-    //Method license exist: Check if a license plate exists in Database
-    public boolean licenseExists(String licensePlate){
-    if (!isEmpty()){
-        for (Car car: findAll()) {
-            if (car.getLicensePlate().equalsIgnoreCase(licensePlate)){
-                return true;
-            }
-        }
-    }else return false;
-    return false;
     }
 
+    //Method is empty: Check if the database is empty
+    public boolean isEmpty() {
+        if (findAll().size() == 0) {
+            return true;
+        } else return false;
+    }
+
+    //Method license exist: Check if a license plate exists in Database
+    public boolean licenseExists(String licensePlate) {
+        if (!isEmpty()) {
+            for (Car car : findAll()) {
+                if (car.getLicensePlate().equalsIgnoreCase(licensePlate)) {
+                    return true;
+                }
+            }
+        } else return false;
+        return false;
+    }
 
 
 }

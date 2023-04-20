@@ -37,6 +37,7 @@ public class Dialog {
                     //TODO
                 }else if(choice==0) {
                     System.out.println("Bye!!");
+                   // clientController.finish();
                     System.exit(0);;
                 } else {
                     System.err.println("[ERROR] Your option is incorrect!! Try again!!");
@@ -50,6 +51,8 @@ public class Dialog {
                 System.err.println(e.getMessage());
             }
         } while (true);
+
+
     }
 
     public void clientManager(){

@@ -1,6 +1,7 @@
 package org.example.model;
 
 public class Car {
+
     Long idCar;
     String licensePlate;
 
